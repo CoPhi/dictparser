@@ -1,5 +1,6 @@
 grammar DictParser;
 //Extract information from dictionaries
+//Create a CSV file
 
 @lexer::header{
     package eu.himeros.dictparser.resources;
