@@ -1,4 +1,5 @@
 grammar DictParser;
+//Extract information from dictionaries
 
 @lexer::header{
     package eu.himeros.dictparser.resources;
