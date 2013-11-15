@@ -1,6 +1,6 @@
 grammar DictParser;
 //Extract information from dictionaries
-
+// syntax errors fixed
 
 @lexer::header{
     package eu.himeros.dictparser.resources;
