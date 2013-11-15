@@ -52,9 +52,9 @@ line	:   UTF8_BOM comment* eol
             |star lemma root* synonym1 eol
             |star lemma root* sense2 eol
             |star lemma root* synonym1 sense1 eol
-            |star lemma root* sense1 esempio eol
+            |star lemma root* sense1 example eol
             |star lemma root* expr_idiom
-            |star lemma root* other eol
+            |star lemma root* other eol;
 
 star    :   '*';
 
@@ -81,7 +81,7 @@ synonym2    :   t=synonym2_set{write("synonym2_set "+G_OPEN_PAR+$t.text+G_CLOSED
 synonym2_set    :   gramm_constr ARABIC_WORD P_MARK;  
 
 //**************caso con rimando ad altro lemma*************
-synonym3    :   star ARABIC_WORD+ P_MARK '*ر.*©' 
+synonym3    :   star ARABIC_WORD+ P_MARK '*ر.*©'; 
 
 gramm_constr    : NUMBER sense_item+ C_MARK;
 
@@ -89,8 +89,8 @@ example_set :   t=example{write("esempio: "+$t.text);};
 example     : '"' example_item+ '"';
 example_item    : t=ARABIC_WORD{write($t.text);}; 
 
-expr_idiom  :   t=expr_idion_set{write("idiomatic sentence: "+$t.text);};
-expr_idiom_set  :   exemple C_MARK;
+expr_idiom  :   t=expr_idiom_set{write("idiomatic sentence: "+$t.text);};
+expr_idiom_set  :   example C_MARK;
 
 sense1  :   gramm_constr P_MARK;
 sense2  :   gramm_constr sense_item+ P_MARK;
