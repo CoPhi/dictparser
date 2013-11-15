@@ -1,10 +1,5 @@
 grammar DictParser;
 
-//options{
-//backtrack=true;
-//k=3;
-//}
-
 @lexer::header{
     package eu.himeros.dictparser.resources;
     import org.antlr.v4.runtime.*;
@@ -21,9 +16,8 @@ grammar DictParser;
     static FileInputStream fis=null;
     static BufferedWriter bw=null;
     static boolean debug=true;
+    static int i=0;
     public static void main(String[] args) throws Exception{
-        //fis=new FileInputStream(new File("../in/w.txt"));
-        //bw=new BufferedWriter(new FileWriter("out.txt"));
         fis=new FileInputStream(new File(args[0]));
 	bw=new BufferedWriter(new FileWriter("out.txt"));
 	ANTLRInputStream input=new ANTLRInputStream(fis);
@@ -47,123 +41,76 @@ grammar DictParser;
 }
 
 //START lines
-start	:	line+;
+start	:   line+ eof;
+
+comment :   '##' star ARABIC_WORD+ '##';
+
+line	:   UTF8_BOM comment* eol
+            |star lemma root* sense1 eol
+            |star lemma root* synonym1 eol
+            |star lemma root* sense2 eol
+            |star lemma root* synonym1 sense1 eol
+            |star lemma root* sense1 esempio eol
+            |star lemma root* expr_idiom
+            |star lemma root* other eol
+
+star    :   '*';
 
 
-line	:	slot+
-		|eol;
-		
-slot	:	
-		({write("\n<slot>");}
-		partLoc?
-		loc?
-		fort?
-		loc?
-		(vel?op)*
-		(vel?op|ed greekSeq ed|loc|number|vel?auth)
-		pmark?
-		loc?
-		op*
-		vel?auth?
-		pmark?
-		op?
-		{write("\n</slot>");});
+lemma   :   lemma_item+ 
+            (C_MARK{write(":");})? 
+            lemma_item*
+            t=(P_MARK|'،'){write("fine lemma "+$t.text);};
 
-op 	:	{openSlot();}
-		lpar
-		ed
-		((t=LATIN_WORD{write("\n unproc="+$t.text);}
-		(t=P_MARK{write($t.text);})?
-		(t=LATIN_WORD{write(" "+$t.text);})*
-		(t=NUMBER{write(" "+$t.text);})?)
-		|t=OP_ADD{write("\n opAdd="+$t.text);}
-		|t=OP_ADD_LAC{write("\n opAddLac="+$t.text);}
-		|t=OP_DEL{write("\n opDel="+$t.text);}
-		|t=OP_SUB{write("\n opSub="+$t.text);}
-		|t=OP_TRS{write("\n opTrs="+$t.text);})+
-		ed
-		rpar;
+lemma_item  : t=ARABIC_WORD{write("lemma "+$t.text);};
 
-inlineOp:	lpar
-		vel?
-		(((t=LATIN_WORD{write(" "+$t.text);})
-		((t=P_MARK{write($t.text);})?
-		(t=LATIN_WORD{write(" "+$t.text);}))*)
-		|t=OP_ADD{write("\n opAdd="+$t.text);}
-		|t=OP_DEL{write("\n opDel="+$t.text);}
-		|t=OP_SUB{write("\n opSub="+$t.text);}
-		|t=OP_TRS{write("\n opTrs="+$t.text);})+
-		rpar;
+glossa      : example? C_MARK? glossa_item+ P_MARK?;
+glossa_item : t=ARABIC_WORD{write("primo senso "+$t.text);};
+
+root    : t=root_set{write("root "+$t.text);};
+root_set :  OPEN_PAR ARABIC_WORD CLOSED_PAR;
+
+//**************caso del sinonimo unico ********************
+synonym1    :   t=synonym1_set{write("synonym "+$t.text);};
+synonym1_set    : NUMBER ARABIC_WORD P_MARK;
+
+//**************caso sinonimo con costruzione***************
+synonym2    :   t=synonym2_set{write("synonym2_set "+G_OPEN_PAR+$t.text+G_CLOSED_PAR);};
+synonym2_set    :   gramm_constr ARABIC_WORD P_MARK;  
+
+//**************caso con rimando ad altro lemma*************
+synonym3    :   star ARABIC_WORD+ P_MARK '*ر.*©' 
+
+gramm_constr    : NUMBER sense_item+ C_MARK;
+
+example_set :   t=example{write("esempio: "+$t.text);};
+example     : '"' example_item+ '"';
+example_item    : t=ARABIC_WORD{write($t.text);}; 
+
+expr_idiom  :   t=expr_idion_set{write("idiomatic sentence: "+$t.text);};
+expr_idiom_set  :   exemple C_MARK;
+
+sense1  :   gramm_constr P_MARK;
+sense2  :   gramm_constr sense_item+ P_MARK;
+sense3  :   gramm_constr example P_MARK;
+sense4  :   expr_idiom C_MARK ARABIC_WORD P_MARK; 
+sense_item    :  t=ARABIC_WORD{write($t.text);};
+
+ 
+other   :   (t=ARABIC_WORD{write("parola "+$t.text);})+
+            (t=C_MARK{write("duePunti "+$t.text);})?
+            (t=Q_MARK{write("virgolette "+$t.text);})?
+            (t=P_MARK{write("fine entrata "+$t.text);})?
+            (t=ARABIC_WORD{write("parola "+$t.text);})*
+            t=P_MARK{write("fine entrata "+$t.text);};
 	
-number	:	lpar
-		t=NUMBER {write("\nverseSeq=: "+$t.text);}
-		rpar;
 
-inlineNumber:	lpar
-		t=NUMBER{write(" "+$t.text);}
-		rpar;
+eol	:   NEWLINE{
+        i++;
+        write(i+"------------");
+        };
 
-eol	:	NEWLINE{write("\n");};
-
-//eof	:
-
-greekSeq:	{openSlot();}
-		lpar
-		{write("\n greekSeq=");}
-		(t=GREEK_SEQ{write(" "+$t.text);})+
-		vel*
-		rpar;
-
-inlineGreekSeq:	t=GREEK_SEQ{write(" "+$t.text);};
-
-auth	:	lpar
-		(t=EDITION{write("\n edition="+$t.text);})?
-		(t=LOC{write("\n edition="+$t.text);})?
-		t=AUTH{write("\n auth="+$t.text);}
-		(t=P_MARK{write("\n pmark="+$t.text);})?
-		rpar
-		{closeSlot();};
-
-ed	:	lpar
-		(t=EDITION{write("\n edition="+$t.text);})?
-		(t=P_MARK{write($t.text);})?
-		rpar;
-
-partLoc: 	{openSlot();}
-		lpar
-		t=PART_LOC{write("\n part_loc="+$t.text);}
-		rpar;
-
-loc	:	{openSlot();}
-		lpar
-		t=LOC{write("\n loc="+$t.text);}
-		(inlineGreekSeq|inlineNumber)
-		rpar
-		;
-
-lpar	:	(t=L_PAR {write("\n lpar="+$t.text);})?;
-
-rpar	:	(t=R_PAR {write("\n rpar="+$t.text);})?
-		(t=P_MARK {write($t.text);})?;
-
-vel	:	lpar
-		t=VEL{write("\n vel="+$t.text);}
-		inlineGreekSeq?
-		rpar;
-
-velGreek:	lpar
-		t=VEL{write("\n vel="+$t.text);}
-		inlineGreekSeq
-		rpar;
-
-fort	:	{openSlot();}
-		lpar
-		t=FORT{write("\n fort="+$t.text);}
-		rpar;
-		
-pmark	:	t=P_MARK{write("\n pmark="+$t.text);};
-
-
+eof	:   EOF;
 
 //END lines
 
@@ -177,41 +124,23 @@ fragment Y:('Y'|'y');fragment Z:('Z'|'z');
 
 fragment LATIN_LETTER
 	:	(A|B|C|D|E|F|G|H|I|J|K|L|M|N|O|P|Q|R|S|T|U|V|W|X|Y|Z);
-fragment GREEK_LETTER
-	:	'-'|'|'|'\u0370'..'\u0386'|'\u0388'..'\u03ff'|'\u1f00'..'\u1fff'|'\u2019'|'&'('a'..'z')+';';
-fragment GREEK_WORD
-	:	('*'' '?)+|GREEK_LETTER+;
-P_MARK	:	','|'.'|';'|'?'|'!'|':'|'\u0387'|Q_MARK;
-fragment Q_MARK	:	'"'|'\'';
+fragment ARABIC_LETTER
+        :       '\u060b'..'\u060f'|'\u061b'|'\u061e'..'\u064a'|'\u0660'..'\u06ff';
+ARABIC_WORD    :  ARABIC_LETTER+;
+P_MARK	:	'.'|'،';
+Q_MARK	:	'"'|'\'';
+C_MARK  :       ':';
 
-L_PAR	:	'('|'<'|'['|'\{';
-R_PAR	:	')'|'>'|']'|'\}';
-//fragment PAREN	:	L_PAR|R_PAR;
+OPEN_PAR    :   '(';
+CLOSED_PAR  :   ')';
 
-VEL	:	(V'el'|V'el potius'|'aut')' ';
-L_TAG	:	'<'('a'..'z')+'>';
-R_TAG	:	'</'('a'..'z')+'>';
-LOC	:	A'nte'|P('ro'|'ost');
-PART_LOC:	I'n '('schol'|'hyp')('.'|'a'..'z')*;
-FORT	:	F'ort'('.'|'asse');
-EDITION	:	O'lim'|P'ostea';
-OP_ADD	:	A'dd'('a'..'z')*|I'nser'('a'..'z')*;
-OP_ADD_LAC
-	:	L'acun'('a'..'z')+(' stat'('a'..'z')*)?;
-OP_DEL 	:	((D'el'|E'i''e'?'c')('a'..'z')+)|O'mi'('t'|'s')('a'..'z')+;
-OP_SUB	:	S'ub'('a'..'z')+;
-OP_TRS	:	T'rans'('a'..'z')+;
-GREEK_SEQ
-	:	V'ersum'|((GREEK_WORD)+(P_MARK)*' .. '?' '*NEWLINE?)+;
-AUTH 	:	('A'..'Z')('.'?' '('A'..'Z')?)*('a'..'z'|'.'|'A'..'Z'|' - '|' et ')*
-		|('schol. ')?'re''c'?'c.'
-		|'b.'
-		|'anon'('.'|'a'..'z')*;
+G_OPEN_PAR  :   '\{';
+G_CLOSED_PAR	:   '\}';
+
 DIGIT	:	'0'..'9';	
-NUMBER	:	H'unc v.'|(V'.'' '?)?(DIGIT' et '?'-'?)+('.'|' ')?('sq''q'?'.')?;
-
-LATIN_WORD
-	:	LATIN_LETTER+;
+NUMBER	:	DIGIT '-';
+UTF8_BOM    :   '\ufeff';//'ï»¿';
+LATIN_WORD:	LATIN_LETTER+;
 
 NEWLINE	: '\n'|'\r'|'\r\n';
 WS	:	(' '|('\n')+|'\r\n'){skip();};

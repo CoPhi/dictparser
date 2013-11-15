@@ -19,6 +19,11 @@
 
 package eu.himeros.dictparser;
 
+import java.io.FileInputStream;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import eu.himeros.dictparser.resources.*;
+
 /**
  *
  * @author federico[DOT]boschetti[DOT]73[AT]gmail[DOT]com
@@ -30,6 +35,15 @@ public class Main {
      */
     public static void main(String[] args) {
         // TODO code application logic here
+         try {
+            FileInputStream fis=new FileInputStream(args[0]);
+            ANTLRInputStream input = new ANTLRInputStream(fis);
+            DictParserLexer lexer = new DictParserLexer(input);
+            CommonTokenStream tokens = new CommonTokenStream(lexer);
+            DictParserParser parser = new DictParserParser(tokens);
+
+            parser.main(args);
+        }catch(Exception ex){}
     }
     
 }
